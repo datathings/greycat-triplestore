@@ -225,7 +225,7 @@ abstract type TripleStoreService {
             result.add(j.result() as ProcessingFileResult);
         }
         result.to_string("ALL");
-        info("Done Loading everything");
+        info("Done Loading everything in ${result.totalDuration}");
     }
 }
 
