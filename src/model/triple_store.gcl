@@ -63,7 +63,7 @@ type ProcessingFileResult {
 
     fn to_string(name: String) {
         var format_speed = float::to_string(this.speed(), '.', ',', 3, false);
-        info("Store: ${name} - Parsed ${int::to_string(this.nbFiles, ',')} files, ${int::to_string(this.nbLines, ',')} lines, ${int::to_string(this.nbError, ',')} failed, speed: ${format_speed} lines/s");
+        info("Store: ${name} - Parsed ${int::to_string(this.nbFiles, ',')} files; ${int::to_string(this.nbLines, ',')} lines; ${int::to_string(this.nbError, ',')} failed; speed: ${format_speed} lines/s");
     }
 }
 
