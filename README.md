@@ -14,7 +14,7 @@ A minimal, end-to-end demo that downloads a DBpedia snapshot, imports it into **
 
 ## 1) Get the data
 
-This fetches the DBpedia “latest-core” files, puts them in `./data/`, and auto-decompresses archives.
+This fetches the [DBpedia](https://www.dbpedia.org/) “latest-core” files, puts them in `./data/`, and auto-decompresses archives.
 
 ```bash
 ./download.sh
