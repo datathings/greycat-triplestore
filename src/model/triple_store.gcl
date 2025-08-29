@@ -212,7 +212,9 @@ abstract type TripleStoreService {
 
     static fn importDir(path: String) {
         var jobs = Array<Job> {};
-        for (i, f in File::ls(path, null, true)) {
+        var files = File::ls(path, null, true);
+        files.sort_by(File::size, SortOrder::desc);
+        for (i, f in files) {
             var name = f.name();
             var nStore = TripleStore::getOrCreateStore(name);
             jobs.add(Job { function: TripleStoreService::importFile, arguments: [f.path, nStore] });
