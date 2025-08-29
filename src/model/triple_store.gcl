@@ -144,9 +144,9 @@ type TripleStore {
             nObject->predicates.set(nPredicate, noi);
         }
 
-        if (nsi.get(nObject) == null) {
-            //Create the triplet relation:
-            var nTriplet = node<Triplet> {
+        var nTriplet= nsi.get(nObject);
+        if (nTriplet == null) {
+            nTriplet = node<Triplet> {
                 Triplet {
                     subject: nSubject,
                     predicate: nPredicate,
@@ -158,6 +158,7 @@ type TripleStore {
             npi.set(nObject, nTriplet);
             noi.set(nSubject, nTriplet);
         } else {
+            //TODO, strategy when relation already exists, either ignore, or replace by newer, or merge
             //error("Relation already exists");
         }
     }
