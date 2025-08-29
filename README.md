@@ -17,7 +17,7 @@ For quick testing, a lightweight **demo dataset** is also included (see [Use dem
     sudo apt-get install -y gzip bzip2
     ```
 * 76 GB of free disk space in `./data/` (DBpedia is large)
-* Around 300 GB of free disk space for `./gcdata/` (Greycat graph database)
+* Around 83 GB of free disk space for `./gcdata/` (Greycat graph database)
 ---
 
 ## 1) Get the DBpedia data
