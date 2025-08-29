@@ -1,0 +1,12 @@
+@library("std", "7.2.263-stable");
+@library("explorer", "7.2.16-stable");
+@include("src");
+
+
+fn import() {
+    TripleStoreService::importDir("./data");
+}
+
+fn main(){
+    
+}

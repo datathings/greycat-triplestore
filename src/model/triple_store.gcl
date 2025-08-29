@@ -1,0 +1,200 @@
+var stores: nodeIndex<String, node<TripleStore>>;
+
+@volatile
+type DBRecord {
+    subject: String;
+    predicate: String;
+    object: String;
+    parsed: String;
+}
+
+@volatile
+type ProcessingFileResult {
+    nbLines: int;
+    nbFiles: int;
+    nbError: int;
+    totalDuration: duration;
+    startTime: time;
+    endTime: time;
+    static fn new(): ProcessingFileResult {
+        return ProcessingFileResult {
+            nbLines: 0,
+            nbFiles: 0,
+            nbError: 0,
+            totalDuration: 0_s,
+            startTime: time::now(),
+            endTime: time::now(),
+        };
+    }
+
+    fn addFile() {
+        this.nbFiles = this.nbFiles + 1;
+    }
+
+    fn addLine() {
+        this.nbLines = this.nbLines + 1;
+    }
+
+    fn addError() {
+        this.nbError = this.nbError + 1;
+    }
+
+    fn add(other: ProcessingFileResult) {
+        this.nbLines = this.nbLines + other.nbLines;
+        this.nbFiles = this.nbFiles + other.nbFiles;
+        this.nbError = this.nbError + other.nbError;
+        if (other.startTime < this.startTime) {
+            this.startTime = other.startTime;
+        }
+        if (other.endTime > this.endTime) {
+            this.endTime = other.endTime;
+        }
+        this.totalDuration = this.endTime - this.startTime;
+    }
+
+    fn speed(): float {
+        this.endTime = time::now();
+        var d = (this.endTime - this.startTime).tof(DurationUnit::seconds);
+        if (d <= 0.0) {
+            d = 1.0;
+        }
+        return (this.nbLines * 1.0 / d);
+    }
+
+    fn info(name: String) {
+        info("Store: ${name} - Parsed ${this.nbFiles} files, ${this.nbLines} lines, ${this.nbError} failed, speed: ${this.speed()} lines/s");
+    }
+}
+
+type TripleStore {
+    name: String;
+    subjects: nodeIndex<String, node<TSSubject>>;
+    predicates: nodeIndex<String, node<TSPredicate>>;
+    objects: nodeIndex<String, node<TSObject>>;
+
+    static fn getOrCreateStore(name: String): node<TripleStore> {
+        var res = stores.get(name);
+        if (res == null) {
+            res = node<TripleStore> {
+                TripleStore {
+                    name: name,
+                    subjects: nodeIndex<String, node<TSSubject>> {},
+                    predicates: nodeIndex<String, node<TSPredicate>> {},
+                    objects: nodeIndex<String, node<TSObject>> {},
+                }
+            };
+            stores.set(name, res);
+        }
+        return res;
+    }
+
+    fn add(subject: String, predicate: String, object: String) {
+        //Get or create Subject:
+        var nSubject = this.subjects.get(subject);
+        if (nSubject == null) {
+            nSubject = node<TSSubject> {
+                TSSubject { name: subject, predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSObject>, any>> {} }
+            };
+            this.subjects.set(subject, nSubject);
+        }
+        //Get or create Predicate:
+        var nPredicate = this.predicates.get(predicate);
+        if (nPredicate == null) {
+            nPredicate = node<TSPredicate> {
+                TSPredicate { name: predicate, subjects: nodeIndex<node<TSSubject>, nodeIndex<node<TSObject>, any>> {} }
+            };
+            this.predicates.set(predicate, nPredicate);
+        }
+        //Get or create Object:
+        var nObject = this.objects.get(object);
+        if (nObject == null) {
+            nObject = node<TSObject> {
+                TSObject { name: object, predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSSubject>, any>> {} }
+            };
+            this.objects.set(object, nObject);
+        }
+
+        //Insert relation in Subject:
+        var nsi = nSubject->predicates.get(nPredicate);
+        if (nsi == null) {
+            nsi = nodeIndex<node<TSObject>, any> {};
+            nSubject->predicates.set(nPredicate, nsi);
+        }
+        nsi.set(nObject, true);
+
+        //Insert relation in Predicate:
+        var npi = nPredicate->subjects.get(nSubject);
+        if (npi == null) {
+            npi = nodeIndex<node<TSObject>, any> {};
+            nPredicate->subjects.set(nSubject, npi);
+        }
+        npi.set(nObject, true);
+
+        //Insert relation in Object:
+        var noi = nObject->predicates.get(nPredicate);
+        if (noi == null) {
+            noi = nodeIndex<node<TSSubject>, any> {};
+            nObject->predicates.set(nPredicate, noi);
+        }
+        noi.set(nSubject, true);
+    }
+}
+
+type TSSubject {
+    name: String;
+    predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSObject>, any>>;
+}
+
+type TSPredicate {
+    name: String;
+    subjects: nodeIndex<node<TSSubject>, nodeIndex<node<TSObject>, any>>;
+}
+
+type TSObject {
+    name: String;
+    predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSSubject>, any>>;
+}
+
+abstract type TripleStoreService {
+    static fn importFile(path: String, nStore: node<TripleStore>): ProcessingFileResult {
+        var csvReader = CsvReader<DBRecord> {
+            path: path,
+            format: CsvFormat { header_lines: 0, separator: ' ', string_delimiter: '\"' }
+        };
+        var result = ProcessingFileResult::new();
+        result.addFile();
+        while (csvReader.can_read()) {
+            try {
+                var record = csvReader.read();
+                nStore->add(record.subject, record.predicate, record.object);
+            } catch (ex) {
+                error("Failed: ${ex}, line: ${csvReader.last_line()}");
+                result.addError();
+            }
+            result.addLine();
+            if (result.nbLines % 1000000 == 0) {
+                result.info(nStore->name);
+            }
+        }
+        result.endTime = time::now();
+        result.info(nStore->name);
+        return result;
+    }
+
+    static fn importDir(path: String) {
+        var jobs = Array<Job> {};
+        for (i, f in File::ls(path, null, true)) {
+            var name = f.name();
+            var nStore = TripleStore::getOrCreateStore(name);
+            jobs.add(Job { function: TripleStoreService::importFile, arguments: [f.path, nStore] });
+        }
+        await(jobs, MergeStrategy::strict);
+        var result = ProcessingFileResult::new();
+        for (i, j in jobs) {
+            result.add(j.result() as ProcessingFileResult);
+        }
+        result.info("ALL");
+        info("Done Loading everything");
+    }
+}
+
