@@ -168,13 +168,10 @@ abstract type TripleStoreService {
                 var record = csvReader.read();
                 nStore->add(record.subject, record.predicate, record.object);
             } catch (ex) {
-                error("Failed: ${ex}, line: ${csvReader.last_line()}");
+                error("Failed file: ${path}, line: ${csvReader.last_line()}, exception: ${ex}");
                 result.addError();
             }
             result.addLine();
-            if (result.nbLines % 1000000 == 0) {
-                result.info(nStore->name);
-            }
         }
         result.endTime = time::now();
         result.info(nStore->name);
