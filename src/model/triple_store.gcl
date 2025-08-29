@@ -61,8 +61,9 @@ type ProcessingFileResult {
         return (this.nbLines * 1.0 / d);
     }
 
-    fn info(name: String) {
-        info("Store: ${name} - Parsed ${this.nbFiles} files, ${this.nbLines} lines, ${this.nbError} failed, speed: ${this.speed()} lines/s");
+    fn to_string(name: String) {
+        var format_speed = float::to_string(this.speed(), '.', ',', 3, false);
+        info("Store: ${name} - Parsed ${int::to_string(this.nbFiles, ',')} files, ${int::to_string(this.nbLines, ',')} lines, ${int::to_string(this.nbError, ',')} failed, speed: ${format_speed} lines/s");
     }
 }
 
@@ -144,7 +145,7 @@ type TripleStore {
             nObject->predicates.set(nPredicate, noi);
         }
 
-        var nTriplet= nsi.get(nObject);
+        var nTriplet = nsi.get(nObject);
         if (nTriplet == null) {
             nTriplet = node<Triplet> {
                 Triplet {
@@ -205,7 +206,7 @@ abstract type TripleStoreService {
             result.addLine();
         }
         result.endTime = time::now();
-        result.info(nStore->name);
+        result.to_string(nStore->name);
         return result;
     }
 
@@ -221,7 +222,7 @@ abstract type TripleStoreService {
         for (i, j in jobs) {
             result.add(j.result() as ProcessingFileResult);
         }
-        result.info("ALL");
+        result.to_string("ALL");
         info("Done Loading everything");
     }
 }
