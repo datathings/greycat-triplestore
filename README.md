@@ -112,10 +112,11 @@ wc -l ./data/*.nt
 
 ```
 .
-├─ download.sh          # Fetches DBpedia core & auto-decompresses into ./data
-├─ .env                 # Greycat settings (cache, workers)
 ├─ src/                 # Greycat triple store graph database library
-├─ data/                # Decompressed DBpedia files live here
+├─ data/                # Decompressed DBpedia files here
+├─ project.gcl          # Greycat main entry point
+├─ .env                 # Greycat settings (cache, workers)
+├─ download.sh          # Fetches DBpedia core & auto-decompresses into ./data
 └─ ...
 ```
 
