@@ -116,6 +116,22 @@ Then continue with the import step (`greycat run import`) — the graph will be 
 
 ---
 
+## Benchmark results
+
+On a machine with 128 CPU and 512 GB RAM, we managed to achieve the following:
+```
+Parsed: 82 files
+Parsed: 544,919,951 lines
+Speed: 431,700.211 lines/s
+Duration: 21 minutes
+```
+
+with the following .env:
+```                              
+GREYCAT_CACHE=400000
+GREYCAT_WORKERS=20
+```
+
 ## Handy checks & tips
 
 **Verify downloaded files**
@@ -174,3 +190,4 @@ greycat run import
 greycat serve --user=1
 # → open http://localhost:8080/explorer/
 ```
+
