@@ -88,12 +88,15 @@ type TripleStore {
         return res;
     }
 
-    fn add(subject: String, predicate: String, object: String) {
+    fn add(subject: String, predicate: String, object: String, value: any?) {
         //Get or create Subject:
         var nSubject = this.subjects.get(subject);
         if (nSubject == null) {
             nSubject = node<TSSubject> {
-                TSSubject { name: subject, predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSObject>, any>> {} }
+                TSSubject {
+                    name: subject,
+                    predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSObject>, node<Triplet>>> {}
+                }
             };
             this.subjects.set(subject, nSubject);
         }
@@ -101,7 +104,10 @@ type TripleStore {
         var nPredicate = this.predicates.get(predicate);
         if (nPredicate == null) {
             nPredicate = node<TSPredicate> {
-                TSPredicate { name: predicate, subjects: nodeIndex<node<TSSubject>, nodeIndex<node<TSObject>, any>> {} }
+                TSPredicate {
+                    name: predicate,
+                    subjects: nodeIndex<node<TSSubject>, nodeIndex<node<TSObject>, node<Triplet>>> {}
+                }
             };
             this.predicates.set(predicate, nPredicate);
         }
@@ -109,7 +115,10 @@ type TripleStore {
         var nObject = this.objects.get(object);
         if (nObject == null) {
             nObject = node<TSObject> {
-                TSObject { name: object, predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSSubject>, any>> {} }
+                TSObject {
+                    name: object,
+                    predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSSubject>, node<Triplet>>> {}
+                }
             };
             this.objects.set(object, nObject);
         }
@@ -117,42 +126,63 @@ type TripleStore {
         //Insert relation in Subject:
         var nsi = nSubject->predicates.get(nPredicate);
         if (nsi == null) {
-            nsi = nodeIndex<node<TSObject>, any> {};
+            nsi = nodeIndex<node<TSObject>, node<Triplet>> {};
             nSubject->predicates.set(nPredicate, nsi);
         }
-        nsi.set(nObject, true);
 
         //Insert relation in Predicate:
         var npi = nPredicate->subjects.get(nSubject);
         if (npi == null) {
-            npi = nodeIndex<node<TSObject>, any> {};
+            npi = nodeIndex<node<TSObject>, node<Triplet>> {};
             nPredicate->subjects.set(nSubject, npi);
         }
-        npi.set(nObject, true);
 
         //Insert relation in Object:
         var noi = nObject->predicates.get(nPredicate);
         if (noi == null) {
-            noi = nodeIndex<node<TSSubject>, any> {};
+            noi = nodeIndex<node<TSSubject>, node<Triplet>> {};
             nObject->predicates.set(nPredicate, noi);
         }
-        noi.set(nSubject, true);
+
+        if (nsi.get(nObject) == null) {
+            //Create the triplet relation:
+            var nTriplet = node<Triplet> {
+                Triplet {
+                    subject: nSubject,
+                    predicate: nPredicate,
+                    object: nObject,
+                    value: value
+                }
+            };
+            nsi.set(nObject, nTriplet);
+            npi.set(nObject, nTriplet);
+            noi.set(nSubject, nTriplet);
+        } else {
+            //error("Relation already exists");
+        }
     }
 }
 
 type TSSubject {
     name: String;
-    predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSObject>, any>>;
+    predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSObject>, node<Triplet>>>;
 }
 
 type TSPredicate {
     name: String;
-    subjects: nodeIndex<node<TSSubject>, nodeIndex<node<TSObject>, any>>;
+    subjects: nodeIndex<node<TSSubject>, nodeIndex<node<TSObject>, node<Triplet>>>;
 }
 
 type TSObject {
     name: String;
-    predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSSubject>, any>>;
+    predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSSubject>, node<Triplet>>>;
+}
+
+type Triplet {
+    subject: node<TSSubject>;
+    predicate: node<TSPredicate>;
+    object: node<TSObject>;
+    value: any?;
 }
 
 abstract type TripleStoreService {
@@ -166,7 +196,7 @@ abstract type TripleStoreService {
         while (csvReader.can_read()) {
             try {
                 var record = csvReader.read();
-                nStore->add(record.subject, record.predicate, record.object);
+                nStore->add(record.subject, record.predicate, record.object, null);
             } catch (ex) {
                 error("Failed file: ${path}, line: ${csvReader.last_line()}, exception: ${ex}");
                 result.addError();
