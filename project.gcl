@@ -3,6 +3,7 @@
 @include("src");
 
 fn import() {
+    // TripleStoreService::importDir("./demo_data");
     TripleStoreService::importDir("./data");
 }
 
