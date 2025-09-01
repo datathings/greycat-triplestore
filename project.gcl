@@ -3,9 +3,9 @@
 @include("src");
 
 fn import() {
-    // TripleStoreService::importDir("./demo_data");
-    TripleStoreService::importDir("./data", false);
-    // TripleStoreService::importDir("/mnt/ce308576-6b1d-44af-8886-97d3f1939a38/data/public_data/triplestore/data", false);
+    var parallel_process = false;
+    TripleStoreService::importDir("./demo_data", parallel_process);
+    // TripleStoreService::importDir("./data", parallel_process);
 }
 
 fn main(){
