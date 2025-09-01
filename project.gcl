@@ -1,11 +1,11 @@
-@library("std", "7.2.263-stable");
+// @library("std", "7.2.263-stable");
 @library("explorer", "7.2.16-stable");
 @include("src");
 
 fn import() {
     // TripleStoreService::importDir("./demo_data");
-    // TripleStoreService::importDir("./data");
-    TripleStoreService::importDir("/mnt/ce308576-6b1d-44af-8886-97d3f1939a38/data/public_data/triplestore/data");
+    TripleStoreService::importDir("./data", false);
+    // TripleStoreService::importDir("/mnt/ce308576-6b1d-44af-8886-97d3f1939a38/data/public_data/triplestore/data", false);
 }
 
 fn main(){

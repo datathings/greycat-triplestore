@@ -198,15 +198,16 @@ abstract type TripleStoreService {
         while (csvReader.can_read()) {
             try {
                 var record = csvReader.read();
-                nStore->add(record.subject, record.predicate, record.object, null);                
+                nStore->add(record.subject, record.predicate, record.object, null);
             } catch (ex) {
                 error("Failed file: ${path}, line: ${csvReader.last_line()}, exception: ${ex}");
                 result.addError();
             }
             result.addLine();
-            if(result.nbLines%1000000==0){
+            if (result.nbLines % 50000 == 0) {
                 //print progress report each 1M
                 result.to_string(nStore->name);
+                Runtime::defrag();
             }
         }
         result.endTime = time::now();
@@ -214,19 +215,28 @@ abstract type TripleStoreService {
         return result;
     }
 
-    static fn importDir(path: String) {
-        var jobs = Array<Job> {};
+    static fn importDir(path: String, parallel: bool) {
         var files = File::ls(path, null, true);
         files.sort_by(File::size, SortOrder::desc);
-        for (i, f in files) {
-            var name = f.name();
-            var nStore = TripleStore::getOrCreateStore(name);
-            jobs.add(Job { function: TripleStoreService::importFile, arguments: [f.path, nStore] });
-        }
-        await(jobs, MergeStrategy::strict);
+
         var result = ProcessingFileResult::new();
-        for (i, j in jobs) {
-            result.add(j.result() as ProcessingFileResult);
+        if (parallel) {
+            var jobs = Array<Job> {};
+            for (i, f in files) {
+                var name = f.name();
+                var nStore = TripleStore::getOrCreateStore(name);
+                jobs.add(Job { function: TripleStoreService::importFile, arguments: [f.path, nStore] });
+            }
+            await(jobs, MergeStrategy::strict);
+            for (i, j in jobs) {
+                result.add(j.result() as ProcessingFileResult);
+            }
+        }else{
+            for (i, f in files) {
+                var name = f.name();
+                var nStore = TripleStore::getOrCreateStore(name);
+                result.add(TripleStoreService::importFile(f.path, nStore));
+            }
         }
         result.to_string("ALL");
         info("Done Loading everything in ${result.totalDuration}");
