@@ -206,7 +206,7 @@ abstract type TripleStoreService {
             result.addLine();
             if(result.nbLines%1000000==0){
                 //print progress report each 1M
-                //result.to_string(nStore->name);
+                result.to_string(nStore->name);
             }
         }
         result.endTime = time::now();
