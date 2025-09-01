@@ -4,7 +4,8 @@
 
 fn import() {
     // TripleStoreService::importDir("./demo_data");
-    TripleStoreService::importDir("./data");
+    // TripleStoreService::importDir("./data");
+    TripleStoreService::importDir("/mnt/ce308576-6b1d-44af-8886-97d3f1939a38/data/public_data/triplestore/data");
 }
 
 fn main(){
