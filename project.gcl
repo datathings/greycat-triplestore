@@ -1,13 +1,16 @@
-// @library("std", "7.2.263-stable");
+@library("std", "7.2.273-stable");
 @library("explorer", "7.2.16-stable");
 @include("src");
 
 fn import() {
     var parallel_process = false;
-    // TripleStoreService::importDir("./demo_data", parallel_process);
-    TripleStoreService::importDir("./data", parallel_process);
+    if (File::open("data") == null) {
+        TripleStoreService::importDir("./demo_data", parallel_process);
+    } else {
+        TripleStoreService::importDir("./data", parallel_process);
+    }
 }
 
-fn main(){
-    
+fn main() {
+
 }

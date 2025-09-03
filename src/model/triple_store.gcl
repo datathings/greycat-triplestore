@@ -67,62 +67,88 @@ type ProcessingFileResult {
     }
 }
 
-type TripleStore {
+type Namespace {
     name: String;
     subjects: nodeIndex<String, node<TSSubject>>;
     predicates: nodeIndex<String, node<TSPredicate>>;
     objects: nodeIndex<String, node<TSObject>>;
 
+    fn getOrCreateSubject(name: String): node<TSSubject> {
+        var res = this.subjects.get(name);
+        if (res == null) {
+            res = node<TSSubject> { TSSubject { name: name, predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSObject>, node<Triplet>>> {} } };
+            this.subjects.set(name, res);
+        }
+        return res;
+    }
+
+    fn getOrCreatePredicate(name: String): node<TSPredicate> {
+        var res = this.predicates.get(name);
+        if (res == null) {
+            res = node<TSPredicate> { TSPredicate { name: name, subjects: nodeIndex<node<TSSubject>, nodeIndex<node<TSObject>, node<Triplet>>> {} } };
+            this.predicates.set(name, res);
+        }
+        return res;
+    }
+
+    fn getOrCreateObject(name: String): node<TSObject> {
+        var res = this.objects.get(name);
+        if (res == null) {
+            res = node<TSObject> { TSObject { name: name, predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSSubject>, node<Triplet>>> {} } };
+            this.objects.set(name, res);
+        }
+        return res;
+    }
+
+}
+
+fn extract_namespace_name_tuple(key: String): Tuple<String, String> {
+    key = key.trim();
+    var subject_str_last = key.lastIndexOf('/');
+    var namespace = key.slice(1, subject_str_last);
+    var name = key.slice(subject_str_last + 1, key.size() - 1);
+    return Tuple<String, String> { x: namespace, y: name };
+}
+
+type TripleStore {
+    name: String;
+    namespaces: nodeIndex<String, node<Namespace>>;
+
     static fn getOrCreateStore(name: String): node<TripleStore> {
         var res = stores.get(name);
         if (res == null) {
-            res = node<TripleStore> {
-                TripleStore {
-                    name: name,
-                    subjects: nodeIndex<String, node<TSSubject>> {},
-                    predicates: nodeIndex<String, node<TSPredicate>> {},
-                    objects: nodeIndex<String, node<TSObject>> {},
-                }
-            };
+            res = node<TripleStore> { TripleStore { name: name, namespaces: nodeIndex<String, node<Namespace>> {} } };
             stores.set(name, res);
         }
         return res;
     }
 
-    fn add(subject: String, predicate: String, object: String, value: any?) {
+    fn getOrCreateNamespace(namespace: String): node<Namespace> {
+        var ns = this.namespaces.get(namespace);
+        if (ns == null) {
+            ns = node<Namespace> {
+                Namespace {
+                    name: namespace,
+                    subjects: nodeIndex<String, node<TSSubject>> {},
+                    predicates: nodeIndex<String, node<TSPredicate>> {},
+                    objects: nodeIndex<String, node<TSObject>> {}
+                }
+            };
+            this.namespaces.set(namespace, ns);
+        }
+        return ns;
+    }
+
+    fn add(subject_str: String, predicate_str: String, object_str: String, value: any?) {
         //Get or create Subject:
-        var nSubject = this.subjects.get(subject);
-        if (nSubject == null) {
-            nSubject = node<TSSubject> {
-                TSSubject {
-                    name: subject,
-                    predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSObject>, node<Triplet>>> {}
-                }
-            };
-            this.subjects.set(subject, nSubject);
-        }
-        //Get or create Predicate:
-        var nPredicate = this.predicates.get(predicate);
-        if (nPredicate == null) {
-            nPredicate = node<TSPredicate> {
-                TSPredicate {
-                    name: predicate,
-                    subjects: nodeIndex<node<TSSubject>, nodeIndex<node<TSObject>, node<Triplet>>> {}
-                }
-            };
-            this.predicates.set(predicate, nPredicate);
-        }
-        //Get or create Object:
-        var nObject = this.objects.get(object);
-        if (nObject == null) {
-            nObject = node<TSObject> {
-                TSObject {
-                    name: object,
-                    predicates: nodeIndex<node<TSPredicate>, nodeIndex<node<TSSubject>, node<Triplet>>> {}
-                }
-            };
-            this.objects.set(object, nObject);
-        }
+        var subject_tuple = extract_namespace_name_tuple(subject_str);
+        var nSubject = this.getOrCreateNamespace(subject_tuple.x)->getOrCreateSubject(subject_tuple.y);
+
+        var predicate_tuple = extract_namespace_name_tuple(predicate_str);
+        var nPredicate = this.getOrCreateNamespace(predicate_tuple.x)->getOrCreatePredicate(predicate_tuple.y);
+
+        var object_tuple = extract_namespace_name_tuple(object_str);
+        var nObject = this.getOrCreateNamespace(object_tuple.x)->getOrCreateObject(object_tuple.y);
 
         //Insert relation in Subject:
         var nsi = nSubject->predicates.get(nPredicate);
@@ -231,7 +257,7 @@ abstract type TripleStoreService {
             for (i, j in jobs) {
                 result.add(j.result() as ProcessingFileResult);
             }
-        }else{
+        } else {
             for (i, f in files) {
                 var name = f.name();
                 var nStore = TripleStore::getOrCreateStore(name);
